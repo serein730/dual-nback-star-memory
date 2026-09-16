@@ -135,7 +135,9 @@ export class Game {
     // 真机接上了）。所以 clone 下来直接跑的人会看到「开始前确认」右栏一片红 ——
     // 铁律 3 的判据仍然满足（点一下「切换数据源」就能玩），但**多了一步**。
     // 这一步是故意的：它把"这一场没有真脑电"从静默变成了必须动手确认。
-    this.bci = new BCIAdapter(new DreamLabSource());
+    // 公开站没有同源采集服务，必须主动选模拟源；否则请求失败后的降级逻辑会把
+    // 专注度钉在 50，看起来像没有动态显示。
+    this.bci = new BCIAdapter(PUBLIC_DEMO ? new MockEEGSource() : new DreamLabSource());
     this.input = new InputHub({
       renderer: this.renderer, camera: this.camera, scene: this.scene, audio: this.audio,
       // 手柄必须跟相机同一个父节点（见 InputHub._bindXR 的 ⚠️）
