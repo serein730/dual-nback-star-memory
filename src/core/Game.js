@@ -421,7 +421,9 @@ export class Game {
    * VR 只剩演示门面、不做真实采集，所以判据在头显里天然不成立 —— 不必特判。
    */
   _needsExitGate() {
-    return this._sessionActive && (this.bci?.source instanceof DreamLabSource);
+    // 双模态星忆是可随时停止的训练体验：不让儿童被口令页困住。
+    // 固定测评等其他真机采集流程仍保留老师确认，避免误中断正式数据采集。
+    return this.sessionMode !== 'nback' && this._sessionActive && (this.bci?.source instanceof DreamLabSource);
   }
 
   _openExitGate() {

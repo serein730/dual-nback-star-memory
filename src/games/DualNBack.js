@@ -347,6 +347,7 @@ export class DualNBack extends MiniGame {
     const hit = target && rt >= 150;
     pad.userData.flash = hit ? 1 : -0.65;
     if (hit) this.score += 10;
+    if (hit) this._celebrateStardust(1);
     // 纯视觉反馈，避免奖励音混进正在记忆的听觉刺激流。
     this.feedback = rt < 150 ? '慢一点，看清楚再出发' : hit ? '太棒啦！收集到星尘 ✨' : '差一点，再看看下一颗星球';
     this._refreshInstructions();
@@ -375,6 +376,7 @@ export class DualNBack extends MiniGame {
     const bothPad = this.pads.find((p) => p.userData.modality === 'both');
     const bothTarget = this.current.visualTarget && this.current.auditoryTarget;
     bothPad.userData.flash = bothTarget && rt >= 150 ? 1 : -0.65;
+    if (added) this._celebrateStardust(added);
     this.feedback = rt < 150 ? '慢一点，看清、听清再出发' : bothTarget
       ? '太棒啦！双星尘已收集 ✨' : '差一点，两个都一样时再按中间';
     this._refreshInstructions();
@@ -465,6 +467,18 @@ export class DualNBack extends MiniGame {
     stardust: this.energy, bestCombo: this.bestCombo }; }
 
   _activeModalities() { return this.n === 0 ? ['visual'] : ['visual', 'auditory']; }
+
+  _celebrateStardust(amount) {
+    const star = this.stars[this.current?.visualValue] || this.stars[0];
+    const position = star.position;
+    // 与前三个小游戏相同的「爆粒子 + 光环 + 上浮文字 + 成功音」组合；
+    // 持续时间很短，不持续干扰下一次刺激或 EEG 对齐。
+    this.ctx.fx?.burst(position, { color: 0xffd36d, count: 24 + amount * 6, speed: 3.1, size: 0.56, ttl: 0.58 });
+    this.ctx.fx?.ring(position, { color: 0xffe08a, from: 0.28, to: 1.9, ttl: 0.46 });
+    this.ctx.fx?.floatText(position, `+${amount} 星尘`, { color: '#ffdf96', scale: 0.4, ttl: 1.05 });
+    this.ctx.audio?.hit(this.combo + 1);
+    this.ctx.input?.pulseAll(0.5, 38);
+  }
 
   _chooseLevel(modality) {
     const next = modality === 'visual' ? 1 : modality === 'both' ? 2 : 3;
