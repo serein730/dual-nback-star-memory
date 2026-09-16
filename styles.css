@@ -1,0 +1,249 @@
+:root {
+  --ink: #eaf2ff;
+  --ink-dim: #9fb0d8;
+  --cyan: #4de2ff;
+  --gold: #ffc94d;
+  --mint: #6bffb0;
+  --coral: #ff5c6c;
+  --violet: #9b7bff;
+  --bg0: #05060f;
+  --bg1: #0d1130;
+  --font: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", "Noto Sans SC", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg0);
+  color: var(--ink);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  touch-action: none;
+  overscroll-behavior: none;
+}
+
+canvas { display: block; }
+
+/* ---------------- 启动门 ----------------
+   三段式全屏（顶栏 / 中部 / 底栏）。不用居中卡片：卡片外框套着三张模块小卡是
+   多余的一层，去掉之后靠留白和两条分隔线做层级，画面也才真的铺得满。
+   ⚠️ 头显浏览器是 Chrome 105 内核，别用 color-mix() / :has() / @container。 */
+.gate {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: clamp(14px, 2.2vh, 30px);
+  padding: clamp(16px, 2.8vh, 36px) clamp(18px, 4vw, 64px);
+  overflow-y: auto;
+  background:
+    radial-gradient(90% 70% at 16% -6%, rgba(64,96,224,.30) 0%, transparent 58%),
+    radial-gradient(80% 62% at 88% 8%, rgba(150,110,255,.20) 0%, transparent 62%),
+    radial-gradient(120% 90% at 50% 0%, #1a2260 0%, #0a0d24 45%, #05060f 100%);
+  transition: opacity .55s ease, visibility .55s;
+}
+.gate.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+
+/* 星点：纯 CSS 平铺，零资产（铁律 3）。整块极缓地明暗一次，避免画面死板。 */
+.gate::before {
+  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    radial-gradient(1.2px 1.2px at 30px 20px, rgba(255,255,255,.75), transparent),
+    radial-gradient(1px 1px at 120px 88px, rgba(180,215,255,.6), transparent),
+    radial-gradient(1.6px 1.6px at 202px 40px, rgba(255,255,255,.5), transparent),
+    radial-gradient(1px 1px at 78px 162px, rgba(150,190,255,.55), transparent),
+    radial-gradient(1.3px 1.3px at 244px 190px, rgba(255,255,255,.45), transparent);
+  background-size: 280px 220px;
+  animation: twinkle 7s ease-in-out infinite;
+}
+@keyframes twinkle { 0%,100% { opacity: .45 } 50% { opacity: .75 } }
+
+.gate-top, .gate-main, .gate-foot { position: relative; z-index: 1; }
+
+/* ---- 顶栏：左品牌，右设备准备 ---- */
+.gate-top {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 18px; flex-wrap: wrap;
+  padding-bottom: clamp(10px, 1.6vh, 18px);
+  border-bottom: 1px solid rgba(140,170,255,.14);
+}
+.brand { display: flex; align-items: center; gap: 16px; }
+.logo-orb {
+  width: clamp(44px, 4vw, 60px); height: clamp(44px, 4vw, 60px);
+  border-radius: 50%; flex: 0 0 auto;
+  background: radial-gradient(circle at 32% 30%, #ffffff 0%, var(--cyan) 32%, #2a6cff 62%, #1a1f66 100%);
+  box-shadow: 0 0 34px rgba(77,226,255,.55), inset 0 -6px 14px rgba(0,0,0,.35);
+  animation: bob 3.6s ease-in-out infinite;
+}
+@keyframes bob { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-7px) } }
+
+.brand-text h1 { margin: 0; font-size: clamp(21px, 2.3vw, 31px); letter-spacing: 3px; }
+.brand-text p { margin: 5px 0 0; font-size: clamp(10.5px, .95vw, 13px); color: var(--ink-dim); letter-spacing: 1px; }
+
+.device { display: flex; align-items: center; gap: 14px; }
+.device-state {
+  display: inline-flex; align-items: center; gap: 9px;
+  padding: 8px 15px; border-radius: 999px;
+  font-size: clamp(11px, .95vw, 12.5px); color: var(--ink-dim);
+  background: rgba(12,18,44,.55); border: 1px solid rgba(140,170,255,.16);
+}
+.dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; background: #6b7a9e; }
+.dot.ok   { background: var(--mint);  box-shadow: 0 0 12px rgba(107,255,176,.75); }
+.dot.warn { background: var(--gold);  box-shadow: 0 0 12px rgba(255,201,77,.7); }
+.dot.bad  { background: var(--coral); box-shadow: 0 0 12px rgba(255,92,108,.6); }
+
+/* ---- 中部 ---- */
+.gate-main {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: clamp(18px, 3.2vh, 44px);
+}
+
+.modules {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: clamp(12px, 1.4vw, 22px);
+  width: min(1180px, 100%);
+}
+.module {
+  position: relative; overflow: hidden;
+  padding: clamp(16px, 2.4vh, 30px) clamp(12px, 1.4vw, 24px);
+  border-radius: 20px;
+  background: linear-gradient(165deg, rgba(42,54,124,.44), rgba(12,16,44,.56));
+  border: 1px solid rgba(140,170,255,.16);
+  display: flex; flex-direction: column; align-items: center; gap: 9px; text-align: center;
+  transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+/* 顶部那道 accent 细线是三关唯一的身份色，和 3D 里的关卡配色一一对应 */
+.module::before {
+  content: ''; position: absolute; top: 0; left: 24%; right: 24%; height: 2px;
+  background: var(--accent); opacity: .6; border-radius: 2px;
+  box-shadow: 0 0 18px var(--accent);
+}
+.module:hover {
+  transform: translateY(-4px);
+  border-color: rgba(160,195,255,.42);
+  box-shadow: 0 18px 46px rgba(0,0,0,.42);
+}
+.emblem {
+  width: clamp(34px, 3.4vw, 50px); height: auto; color: var(--accent);
+  fill: none; stroke: currentColor; stroke-width: 3.2;
+  stroke-linejoin: round; stroke-linecap: round;
+  filter: drop-shadow(0 0 9px var(--accent));
+}
+.emblem .thin  { opacity: .5; }
+.emblem .solid { fill: currentColor; stroke: none; }
+.emblem .dim   { opacity: .45; }
+
+.module b    { font-size: clamp(15px, 1.5vw, 20px); letter-spacing: 1.5px; }
+.module span { font-size: clamp(10.5px, 1vw, 13px); color: var(--accent); letter-spacing: .5px; }
+.module p    { margin: 0; font-size: clamp(10.5px, .95vw, 12.5px); color: var(--ink-dim); line-height: 1.6; }
+
+.gate-actions {
+  display: flex; gap: clamp(12px, 1.4vw, 20px); flex-wrap: wrap; justify-content: center;
+}
+
+.btn {
+  padding: 14px 22px;
+  border-radius: 16px;
+  border: 1px solid transparent;
+  font-family: inherit;
+  color: #06122b;
+  cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  transition: transform .16s ease, box-shadow .16s ease, filter .16s ease, background .16s ease;
+}
+.btn:disabled { cursor: progress; filter: grayscale(.55) brightness(.75); }
+.btn:not(:disabled):hover { transform: translateY(-2px); }
+.btn-main { font-size: 17px; font-weight: 700; letter-spacing: 1px; }
+.btn-sub { font-size: 11px; opacity: .75; }
+
+/* 两个开始按钮是同一件事的两条设备路径，所以尺寸同级、并排 */
+.gate-actions .btn {
+  min-width: clamp(190px, 21vw, 270px);
+  padding: clamp(13px, 1.7vh, 19px) 26px;
+}
+.btn-primary {
+  background: linear-gradient(135deg, #7defff, #38b6ff 55%, #4b6bff);
+  box-shadow: 0 12px 34px rgba(60,160,255,.34);
+}
+.btn-ghost {
+  background: rgba(255,255,255,.06);
+  border-color: rgba(155,123,255,.45);
+  color: var(--ink);
+}
+.btn-ghost:not(:disabled):hover { background: rgba(155,123,255,.18); }
+
+/* 设备准备是前置动作，视觉重量刻意低于两个开始按钮 */
+.btn-device {
+  padding: 9px 17px; border-radius: 14px;
+  background: rgba(255,255,255,.05);
+  border-color: rgba(120,160,255,.3);
+  color: var(--ink);
+}
+.btn-device:hover { background: rgba(90,140,255,.18); }
+.btn-device .btn-main { font-size: 14px; letter-spacing: .5px; }
+.btn-device .btn-sub { font-size: 10.5px; }
+
+.gate-hint {
+  margin: 0; text-align: center; line-height: 1.75;
+  font-size: clamp(11.5px, 1vw, 13px); color: var(--ink-dim);
+}
+.gate-hint b { color: var(--gold); }
+.gate-hint-dim { color: #7183ab; }
+.gate-hint-dim b { color: var(--cyan); }
+
+/* ---- 底栏 ---- */
+.gate-foot {
+  padding-top: clamp(9px, 1.4vh, 16px);
+  border-top: 1px solid rgba(255,255,255,.07);
+  text-align: center; line-height: 1.7;
+  font-size: clamp(10px, .9vw, 12px); color: #7183ab;
+}
+.gate-foot b { color: #a5b4d8; }
+
+/* ---------------- 运行时 DOM ---------------- */
+.hud-dom {
+  position: fixed; top: 14px; right: 14px; z-index: 10;
+  display: flex; gap: 8px; align-items: center;
+}
+.pill {
+  font-family: inherit; font-size: 12px; color: var(--ink);
+  padding: 8px 14px; border-radius: 999px; cursor: pointer;
+  background: rgba(14,20,50,.6);
+  border: 1px solid rgba(140,170,255,.24);
+  backdrop-filter: blur(8px);
+  transition: background .16s ease;
+}
+.pill:hover { background: rgba(60,90,180,.5); }
+.pill-dim { cursor: default; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+
+.toast {
+  position: fixed; left: 50%; bottom: 34px; transform: translateX(-50%);
+  z-index: 30; padding: 12px 22px; border-radius: 14px; font-size: 13px;
+  background: rgba(12,18,44,.9); border: 1px solid rgba(140,170,255,.3);
+  box-shadow: 0 12px 40px rgba(0,0,0,.5);
+  animation: toastIn .28s ease;
+}
+@keyframes toastIn { from { opacity: 0; transform: translate(-50%, 12px) } to { opacity: 1; transform: translate(-50%, 0) } }
+
+/* 窄屏：三卡先折成两列再折成一列；顶栏的设备区整条落到下一行并撑满 */
+@media (max-width: 900px) {
+  .modules { grid-template-columns: repeat(2, 1fr); }
+  .gate-top { justify-content: center; }
+  .device { width: 100%; justify-content: center; }
+}
+@media (max-width: 560px) {
+  .modules { grid-template-columns: 1fr; }
+  .module { flex-direction: row; text-align: left; gap: 14px; padding: 14px 16px; }
+  .module::before { left: 0; right: auto; top: 22%; bottom: 22%; width: 2px; height: auto; }
+  .module p { display: none; }
+  .gate-actions .btn { min-width: 100%; }
+}
+/* 矮屏（笔记本横屏、头显浏览器的窗口模式）：先牺牲卡片里的一句话说明 */
+@media (max-height: 620px) {
+  .module p { display: none; }
+  .gate-main { gap: 16px; }
+}

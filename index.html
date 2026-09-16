@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0d24" />
+  <title>星海专注营 · 儿童注意力表现测评 Demo</title>
+  <link rel="stylesheet" href="./styles.css" />
+
+  <!-- 全部依赖本地化：断网 / 局域网 / 头显浏览器均可运行 -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./vendor/three/three.module.js",
+      "three/addons/": "./vendor/three/addons/"
+    }
+  }
+  </script>
+</head>
+<body>
+
+  <!-- ===== 启动门（同时用于解锁 WebAudio）=====
+       三段式全屏：顶栏（品牌 + 设备准备）/ 中部（模块 + 开始）/ 底栏（免责）。
+       「开始评估」与「进入 VR」是同一件事的两条设备路径，必须并排同级；
+       「脑电设置」是前置准备，所以拎到顶栏，不混进那一排。 -->
+  <div id="gate" class="gate">
+
+    <header class="gate-top">
+      <div class="brand">
+        <span class="logo-orb"></span>
+        <div class="brand-text">
+          <h1>星海专注营</h1>
+          <p>Star Focus Camp · 儿童注意力表现测评原型</p>
+        </div>
+      </div>
+
+      <div class="device">
+        <span class="device-state" id="bci-state">
+          <i class="dot" id="bci-dot"></i><span id="bci-text">正在检测脑电设备…</span>
+        </span>
+        <button id="btn-bci" class="btn btn-device">
+          <span class="btn-main">脑电设置</span>
+          <span class="btn-sub">连接设备 · 检查信号</span>
+        </button>
+        <button id="btn-viz" class="btn btn-device">
+          <span class="btn-main">测评报告</span>
+          <span class="btn-sub">历次记录 · 解读与指标</span>
+        </button>
+        <button id="btn-sync" class="btn btn-device">
+          <span class="btn-main">数据同步</span>
+          <span class="btn-sub">导入协作机的数据包</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="gate-main">
+      <div class="modules">
+        <article class="module" style="--accent:#4de2ff">
+          <svg class="emblem" viewBox="0 0 64 64" aria-hidden="true">
+            <path d="M32 6 L52 18 L52 46 L32 58 L12 46 L12 18 Z" />
+            <path d="M12 18 L52 18 M32 6 L32 58" class="thin" />
+          </svg>
+          <b>星海捕手</b>
+          <span>持续注意 · 反应抑制</span>
+          <p>接住蓝水晶，忍住不碰红陨石</p>
+        </article>
+        <article class="module" style="--accent:#b98cff">
+          <svg class="emblem" viewBox="0 0 64 64" aria-hidden="true">
+            <circle cx="32" cy="32" r="25" />
+            <circle cx="32" cy="32" r="15.5" class="thin" />
+            <circle cx="32" cy="32" r="7" class="thin" />
+            <circle cx="32" cy="32" r="2.6" class="solid" />
+          </svg>
+          <b>光束聚焦</b>
+          <span>选择性注意 · 抗干扰</span>
+          <p>在干扰里找出和提示一样的符文</p>
+        </article>
+        <article class="module" style="--accent:#6bffb0">
+          <svg class="emblem" viewBox="0 0 64 64" aria-hidden="true">
+            <path d="M14 52 L14 34 M32 52 L32 20 M46 52 L46 28 M58 52 L58 14" />
+            <circle cx="14" cy="30" r="3.4" class="solid dim" />
+            <circle cx="32" cy="16" r="3.4" class="solid" />
+            <circle cx="46" cy="24" r="3.4" class="solid dim" />
+            <circle cx="58" cy="10" r="3.4" class="solid" />
+          </svg>
+          <b>回声之路</b>
+          <span>工作记忆 · 序列广度</span>
+          <p>记住柱子亮起的顺序，再点一遍</p>
+        </article>
+        <article class="module" style="--accent:#ffc767">
+          <svg class="emblem" viewBox="0 0 64 64" aria-hidden="true">
+            <circle cx="25" cy="32" r="14" />
+            <circle cx="25" cy="32" r="7" />
+            <path d="M7 32h8M35 22h13M35 32h10M35 42h13" />
+            <circle cx="51" cy="22" r="2" class="solid" />
+            <circle cx="48" cy="32" r="2" class="solid" />
+            <circle cx="51" cy="42" r="2" class="solid" />
+          </svg>
+          <b>双模态星忆</b>
+          <span>工作记忆 · 0→1→2-back</span>
+          <p>先认识目标星球，再记住星位和字母</p>
+        </article>
+      </div>
+
+      <div class="gate-actions">
+        <button id="btn-desktop" class="btn btn-primary" disabled>
+          <span class="btn-main">正在加载星海…</span>
+          <span class="btn-sub">电脑浏览器</span>
+        </button>
+        <button id="btn-xr" class="btn btn-ghost" hidden>
+          <span class="btn-main">进入 VR 模式</span>
+          <span class="btn-sub" id="xr-sub">检测中…</span>
+        </button>
+      </div>
+
+      <p class="gate-hint" id="gate-hint">
+        电脑端：移动鼠标瞄准，<b>左键 / 空格</b> 出手。VR：用手柄射线对准目标，扣<b>扳机</b>。
+      </p>
+      <p class="gate-hint gate-hint-dim" id="xr-hint" hidden></p>
+    </main>
+
+    <footer class="gate-foot">
+      本原型用于验证 Three.js / WebXR / 脑电设备接入链路。所有指标未经临床常模标定，
+      <b>不是医疗器械，不构成任何诊断、评估结论或治疗建议</b>。
+    </footer>
+  </div>
+
+  <!-- ===== 运行中的轻量 DOM 提示（3D 内容全部在世界空间）===== -->
+  <div id="hud-dom" class="hud-dom" hidden>
+    <button id="btn-xr-inline" class="pill" hidden>进入 VR</button>
+    <!-- 语义是「退一层」不是「去菜单」：关卡里退到大厅，大厅里退回这张启动门 -->
+    <button id="btn-menu" class="pill">返回 (Esc)</button>
+    <span id="fps" class="pill pill-dim">--</span>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <!-- 顶栏三个功能页的跳转。**刻意内联在这里，不写进 src/main.js**：那个文件是 module，
+       要等 Three.js（2.2MB）加载完才开始执行，在那之前点这三个按钮一点反应都没有，
+       而施测者进页面第一件事往往就是点「脑电设置」。这段不依赖任何模块，DOM 一解析就生效。
+
+       ① 一律**同标签页**跳转（2026-08-12 用户拍板，此前是 window.open 开新标签）：
+          代价是从功能页回来时整个 3D 场景要重新加载一遍，换来的是施测现场只面对一个窗口。
+       ② 口令（?k= / ?c=）**只带给脑电设置页**：报告页用不上它，而数据同步的导入端点
+          只认本机直连，带了也没用（见 serve.mjs 的 importBundle）。
+       ③ 离开前把口令存一份，三个功能页的「返回主页」再带回来 —— 同标签跳转会把 URL 上的
+          口令丢掉，而没有口令的启动门在公网反代下只表现为"设备一直检测不出来"，不报任何错。 -->
+  <script>
+  (function () {
+    function openPage(path, withQuery) {
+      // 隐私模式下 sessionStorage 会抛；丢了口令的后果只是要重新走一次带参数的链接
+      try { sessionStorage.setItem('sfc:home-query', location.search); } catch (e) { /* 忽略 */ }
+      location.href = withQuery ? path + location.search : path;
+    }
+    document.getElementById('btn-bci').addEventListener('click', function () { openPage('./bci.html', true); });
+    document.getElementById('btn-viz').addEventListener('click', function () { openPage('./viz.html', false); });
+    document.getElementById('btn-sync').addEventListener('click', function () { openPage('./sync.html', false); });
+  })();
+  </script>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
