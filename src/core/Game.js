@@ -2411,7 +2411,8 @@ export class Game {
           const st = this.current.hudState();
           this.hud.set({
             ...st,
-            attention: this.bci.attention,
+            // 公开演示版明确使用游戏表现驱动的模拟波动；本地/真机始终显示 EEG 值。
+            attention: this.isPublicDemo && Number.isFinite(st.demoAttention) ? st.demoAttention : this.bci.attention,
             quality: this.bci.quality,
           });
           if (this.current.meta.id === 'echo') this._echoPeak = this.current.peakSpan;

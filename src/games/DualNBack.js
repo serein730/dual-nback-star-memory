@@ -14,8 +14,8 @@ import { MiniGame } from './MiniGame.js';
 
 export const NBACK_STAGE = Object.freeze({
   positions: Object.freeze([
-    [-1.65, 1.64, -4.85], [-0.62, 2.24, -4.85], [0.62, 2.24, -4.85],
-    [1.65, 1.64, -4.85], [-1.05, 0.92, -4.85], [1.05, 0.92, -4.85],
+    [-1.76, 1.64, -4.85], [-0.76, 2.26, -4.85], [0.76, 2.26, -4.85],
+    [1.76, 1.64, -4.85], [-1.15, 0.88, -4.85], [1.15, 0.88, -4.85],
   ]),
   visualColor: 0x4e7fc2,
   stimulusColor: 0xff9f59,
@@ -104,6 +104,7 @@ export class DualNBack extends MiniGame {
     this.selectedLevel = null;
     this.zeroTargetVisual = NBACK_PROTOCOL.zeroTargetVisual;
     this.feedback = '';
+    this.demoAttention = 50;
     this.textures = [];
   }
 
@@ -209,7 +210,8 @@ export class DualNBack extends MiniGame {
 
   hudState() {
     return { ...super.hudState(), mode: 'nback', streak: this.combo,
-      score: this.energy, accuracy: this.targetCount ? this.targetHits / this.targetCount : null };
+      score: this.energy, accuracy: this.targetCount ? this.targetHits / this.targetCount : null,
+      demoAttention: this.demoAttention };
   }
 
   exit() {
@@ -507,6 +509,10 @@ export class DualNBack extends MiniGame {
   update(dt) {
     if (this.finished) return;
     this.elapsed += dt;
+    // 公开演示没有 EEG 端点时，专注度以轻微波动加即时游戏表现模拟；不替代真实脑电。
+    const hitRate = this.targetCount ? this.targetHits / this.targetCount : 0.5;
+    const targetAttention = 48 + Math.sin(this.elapsed * 0.7) * 2.5 + (hitRate - 0.5) * 18 + Math.min(this.combo, 5) * 2.2;
+    this.demoAttention += (clamp(targetAttention, 35, 88) - this.demoAttention) * Math.min(1, dt * 1.5);
     const { hovered, presses } = this.readPointers();
     for (const p of this.pads) {
       const u = p.userData; u.hover = mix(u.hover, hovered.has(p) ? 1 : 0, Math.min(1, dt * 12));
