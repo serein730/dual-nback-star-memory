@@ -31,15 +31,17 @@ export const NBACK_STAGE = Object.freeze({
 // 相邻音至少相隔一个纯四/五度。比连续音阶更容易在普通笔记本扬声器上分辨，
 // 同时仍是固定、可复现的纯音刺激，而不是带语言含义的提示音。
 export const NBACK_AUDIO_FREQS = Object.freeze([261.63, 392, 587.33, 783.99, 1046.5, 1318.51]);
-export const NBACK_AUDIO_LABELS = Object.freeze(['A', 'B', 'C', 'D', 'E', 'F']);
+// 避开 B/D、M/N、E/T 等儿童容易混听的字母对；各项的起始音和韵母都拉开。
+export const NBACK_AUDIO_LABELS = Object.freeze(['A', 'K', 'O', 'U', 'W', 'Z']);
 export const NBACK_PROTOCOL = Object.freeze({
-  version: 7,
+  version: 8,
   paradigm: 'dual-nback',
   task: 'guided 0-back visual target, then visual-spatial + auditory-letter N-back',
   startN: 0,
   minN: 0,
-  maxN: 2,
+  maxN: 3,
   blocks: 4,
+  guidedTrials: 6,
   scoredTrialsPerBlock: 12,
   soaMs: 4000,
   stimulusMs: 1100,
@@ -49,10 +51,10 @@ export const NBACK_PROTOCOL = Object.freeze({
   auditoryFrequenciesHz: NBACK_AUDIO_FREQS,
   auditoryLabels: NBACK_AUDIO_LABELS,
   responseControls: 'visual pad, auditory pad, and combined pad; combined pad records both modality responses at one timestamp',
-  adaptation: 'the first guided 0-back block always advances to 1-back; afterwards whole-block accuracy >= .75 advances, < .60 or 3 consecutive misses steps down; 2-back is played for a complete block when reached',
+  adaptation: 'a short 0-back tutorial is followed by explicit player choice of fixed 1-back, 2-back, or 3-back; the selected difficulty is retained for the remaining blocks',
   scoring: 'each non-anticipatory target hit collects one stardust; warmup and correct rejection give no reward',
   warmup: 'first n items of each block are scored:false',
-  comparability: 'adaptive sessions are for within-child longitudinal tracking under the same protocol; not normative diagnosis',
+  comparability: 'sessions are comparable only within the same selected difficulty and protocol; not normative diagnosis',
 });
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
@@ -98,6 +100,8 @@ export class DualNBack extends MiniGame {
     this.bestCombo = 0;
     this.consecutiveMisses = 0;
     this.blockNeedsSupport = false;
+    this.selectingLevel = false;
+    this.selectedLevel = null;
     this.zeroTargetVisual = NBACK_PROTOCOL.zeroTargetVisual;
     this.feedback = '';
     this.textures = [];
@@ -188,7 +192,9 @@ export class DualNBack extends MiniGame {
 
   _refreshInstructions() {
     let lines;
-    if (this.blockComplete) {
+    if (this.selectingLevel) {
+      lines = ['新手训练完成！选择下一段记忆任务', '从 1-back 开始；熟悉规则后可挑战 2-back 或 3-back'];
+    } else if (this.blockComplete) {
       lines = [`任务 ${this.block + 1} 完成 · 能量 ${this.energy}`, this.block + 1 < NBACK_PROTOCOL.blocks ? '飞船正在准备下一段任务…' : '星海任务全部完成！'];
     } else if (this.n === 0) {
       lines = ['新手训练 · 认识能量星球', '看见金色圈住的星球，就按下方按钮'];
@@ -259,6 +265,16 @@ export class DualNBack extends MiniGame {
   /** 0-back 只留一个大按钮，先把规则学会再引入双模态按键。 */
   _setControlsForLevel() {
     const guided = this.n === 0;
+    if (this.selectingLevel) {
+      this.zeroTargetMarker.visible = false;
+      this.pads.forEach((pad, i) => {
+        pad.visible = true;
+        pad.position.x = [NBACK_STAGE.visualPadX, NBACK_STAGE.bothPadX, NBACK_STAGE.auditoryPadX][i];
+        this.controlLabels[i].mesh.visible = true;
+        this._writeLabel(this.controlLabels[i], [`${i + 1}-back`, i === 0 ? '从这里开始' : i === 1 ? '记住前 2 次' : '记住前 3 次']);
+      });
+      return;
+    }
     this.zeroTargetMarker.visible = guided;
     this.pads.forEach((pad, i) => {
       const visible = !guided || i === 0;
@@ -266,6 +282,11 @@ export class DualNBack extends MiniGame {
       if (i === 0) pad.position.x = guided ? NBACK_STAGE.guidedPadX : NBACK_STAGE.visualPadX;
       this.controlLabels[i].mesh.visible = !guided;
     });
+    if (!guided) {
+      this._writeLabel(this.controlLabels[0], ['位置一样 → 左边']);
+      this._writeLabel(this.controlLabels[1], ['两个都一样 → 中间']);
+      this._writeLabel(this.controlLabels[2], ['字母一样 → 右边']);
+    }
   }
 
   _nextValue(stream, target) {
@@ -284,6 +305,11 @@ export class DualNBack extends MiniGame {
 
   _nextTrial() {
     this.index++;
+    if (this.n === 0) {
+      // 每次教学题都换一个金色目标，孩子要看清“金圈”而非只记住固定位置。
+      this.zeroTargetVisual = (this.zeroTargetVisual + 1 + Math.floor(Math.random() * (NBACK_STAGE.positions.length - 1))) % NBACK_STAGE.positions.length;
+      this.zeroTargetMarker.position.set(...NBACK_STAGE.positions[this.zeroTargetVisual]);
+    }
     const warmup = this.n > 0 && this.index < this.n;
     const visualTarget = !warmup && Math.random() < NBACK_PROTOCOL.targetRate;
     const auditoryTarget = this.n > 0 && !warmup && Math.random() < NBACK_PROTOCOL.targetRate;
@@ -401,7 +427,7 @@ export class DualNBack extends MiniGame {
       } else this.feedback = '差一点，再试一次！';
     }
     this._refreshInstructions();
-    const totalInBlock = this.n + NBACK_PROTOCOL.scoredTrialsPerBlock;
+    const totalInBlock = this.n === 0 ? NBACK_PROTOCOL.guidedTrials : this.n + NBACK_PROTOCOL.scoredTrialsPerBlock;
     if (this.index + 1 >= totalInBlock) this._finishBlock();
     this.current = null;
   }
@@ -417,20 +443,19 @@ export class DualNBack extends MiniGame {
     });
     const adaptationScore = rates.includes(null) ? null : Math.min(...rates);
     const before = this.n;
-    // 0-back 是认识规则的教学段，而不是一道会把孩子卡住的关卡。
-    // 原先要求每一种极少出现的目标/非目标都分别有样本，常使很好的表现得到
-    // adaptationScore:null，因而永远停在 0 或 1-back。后续改用完整试次正确率，
-    // 保留连续失误的优先降级，确保已到 2-back 的孩子至少实际完成一个完整训练段。
+    // 新手段只教规则；后续难度由儿童/老师明确选择，而不是由短段样本自动猜测。
     if (before === 0) {
-      this.n = 1;
-    } else if (this.blockNeedsSupport || accuracy < 0.60) {
-      this.n = clamp(this.n - 1, NBACK_PROTOCOL.minN, NBACK_PROTOCOL.maxN);
-    } else if (accuracy >= 0.75) {
-      this.n = clamp(this.n + 1, NBACK_PROTOCOL.minN, NBACK_PROTOCOL.maxN);
+      this.blockLog.push({ block: this.block, n: before, accuracy, adaptationScore, scored: trials.length,
+        energy: this.energy, bestCombo: this.bestCombo, supportShown: this.blockNeedsSupport, nextN: null });
+      this.levelHistory.push({ block: this.block + 1, n: null, reason: 'choose' });
+      this.selectingLevel = true;
+      this._setControlsForLevel();
+      this._refreshInstructions();
+      return;
     }
     this.blockLog.push({ block: this.block, n: before, accuracy, adaptationScore, scored: trials.length,
       energy: this.energy, bestCombo: this.bestCombo, supportShown: this.blockNeedsSupport, nextN: this.n });
-    this.levelHistory.push({ block: this.block + 1, n: this.n, reason: this.n > before ? 'up' : this.n < before ? 'down' : 'hold' });
+    this.levelHistory.push({ block: this.block + 1, n: this.n, reason: 'selected' });
     this.blockComplete = true; this.breakT = 0;
     this.ctx.onEvent?.({ type: 'nback-block-end', index: this.block, n: before, nextN: this.n });
     this._refreshInstructions();
@@ -440,6 +465,17 @@ export class DualNBack extends MiniGame {
     stardust: this.energy, bestCombo: this.bestCombo }; }
 
   _activeModalities() { return this.n === 0 ? ['visual'] : ['visual', 'auditory']; }
+
+  _chooseLevel(modality) {
+    const next = modality === 'visual' ? 1 : modality === 'both' ? 2 : 3;
+    this.n = next;
+    this.selectedLevel = next;
+    this.selectingLevel = false;
+    this.block++;
+    this.feedback = `已选择 ${next}-back，慢慢来，记住前面第 ${next} 次。`;
+    this.ctx.onEvent?.({ type: 'nback-level-selected', n: next });
+    this._beginBlock();
+  }
 
   _paintStar(star) {
     const u = star.userData;
@@ -468,7 +504,8 @@ export class DualNBack extends MiniGame {
     }
     for (const press of presses) {
       const modality = press.target?.userData?.modality;
-      if (modality === 'both') this._respondBoth();
+      if (this.selectingLevel && modality) this._chooseLevel(modality);
+      else if (modality === 'both') this._respondBoth();
       else if (modality) this._respond(modality);
     }
     for (const star of this.stars) {
@@ -476,6 +513,8 @@ export class DualNBack extends MiniGame {
       u.glow = this.current && u.index === this.current.visualValue && this.elapsed - this.stimulusAt < NBACK_PROTOCOL.stimulusMs / 1000 ? 1 : 0;
       this._paintStar(star);
     }
+
+    if (this.selectingLevel) return;
 
     if (this.blockComplete) {
       this.breakT += dt;

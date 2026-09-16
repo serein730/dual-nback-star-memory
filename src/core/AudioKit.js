@@ -157,9 +157,10 @@ export class AudioKit {
       synth.cancel();
       const u = new Utterance(String(letter));
       u.lang = 'en-US';
-      u.rate = 0.72;
-      u.pitch = 1.18;
-      u.volume = 0.62;
+      // N-back 字母要清楚但不催促：放慢到儿童可分辨的单字母语速，并略提高音量。
+      u.rate = 0.64;
+      u.pitch = 1.05;
+      u.volume = 0.76;
       synth.speak(u);
       return;
     }
