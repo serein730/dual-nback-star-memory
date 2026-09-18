@@ -1183,13 +1183,15 @@ function ufovAim(d, obj) {
  * 星位、反应键位置和音高索引均取自 DualNBack 的真常量。
  */
 const nbackDemo = {
-  duration: .8 + 5 * NBACK_PROTOCOL.soaMs / 1000,
+  duration: .8 + 7 * NBACK_PROTOCOL.soaMs / 1000,
   captions: [
-    { at: 0, icon: 'eye', text: '新手训练：金色圈住的是能量星球，看见它就按' },
-    { at: .8 + NBACK_PROTOCOL.soaMs / 1000, icon: 'tap', text: '找到啦！收集星尘后，会开始记住刚才的星位' },
-    { at: .8 + 2 * NBACK_PROTOCOL.soaMs / 1000, icon: 'eye', text: '星尘记忆：现在加入字母，先听一次、记住它' },
-    { at: .8 + 3 * NBACK_PROTOCOL.soaMs / 1000, icon: 'stop', text: '都不一样时，安静等下一颗星球' },
-    { at: .8 + 4 * NBACK_PROTOCOL.soaMs / 1000, icon: 'tap', text: '星际记忆：位置和字母都一样，按中间' },
+    { at: 0, icon: 'eye', text: '先看演示：金圈会告诉你哪颗是能量星球' },
+    { at: .8 + NBACK_PROTOCOL.soaMs / 1000, icon: 'tap', text: '演示：星球进金圈，手指就按圆按钮' },
+    { at: .8 + 2 * NBACK_PROTOCOL.soaMs / 1000, icon: 'eye', text: '第 1 关：先看一个位置、听一个字母' },
+    { at: .8 + 3 * NBACK_PROTOCOL.soaMs / 1000, icon: 'tap', text: '只有位置一样：按左边眼睛按钮' },
+    { at: .8 + 4 * NBACK_PROTOCOL.soaMs / 1000, icon: 'tap', text: '只有字母一样：按右边声音按钮' },
+    { at: .8 + 5 * NBACK_PROTOCOL.soaMs / 1000, icon: 'stop', text: '位置、字母都不一样：不要按' },
+    { at: .8 + 6 * NBACK_PROTOCOL.soaMs / 1000, icon: 'tap', text: '位置、字母都一样：按中间按钮' },
   ],
   build(d) {
     const p = d.p;
@@ -1207,19 +1209,40 @@ const nbackDemo = {
     p.pads = [NBACK_STAGE.guidedPadX, NBACK_STAGE.bothPadX, NBACK_STAGE.auditoryPadX].map((x, i) => {
       const color = i === 0 ? NBACK_STAGE.visualColor : i === 1 ? 0xb98cff : NBACK_STAGE.audioColor;
       const m = new THREE.Mesh(new THREE.RingGeometry(.28, .37, 30), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: .68 }));
+      const iconMat = () => new THREE.MeshBasicMaterial({ color, transparent: true, opacity: .92, depthWrite: false });
+      const addEye = (offset = 0) => {
+        const eye = new THREE.Mesh(new THREE.RingGeometry(.065, .12, 24), iconMat());
+        eye.scale.y = .62; eye.position.x = offset; m.add(eye);
+      };
+      const addWaves = (offset = 0, radii = [.05, .12, .19]) => radii.forEach((r) => {
+        const wave = new THREE.Mesh(new THREE.RingGeometry(r, r + .018, 24), iconMat());
+        wave.position.x = offset; m.add(wave);
+      });
+      if (i === 0) addEye();
+      else if (i === 2) addWaves();
+      else { addEye(-.07); addWaves(.08, [.045, .095]); }
       m.position.set(x, NBACK_STAGE.padY, NBACK_STAGE.padZ); d.props.add(m); return m;
     });
+    p.pads[1].visible = false;
+    p.pads[2].visible = false;
     d.s.lit = -1; d.s.pad = -1;
   },
   beats: [
     { at: .8, run: (d) => nbackLight(d, NBACK_PROTOCOL.zeroTargetVisual, null) },
     { at: .8 + NBACK_PROTOCOL.soaMs / 1000, run: (d) => { nbackLight(d, NBACK_PROTOCOL.zeroTargetVisual, null); d.showCursor(true); d.moveTo(aimAt(d, d.p.pads[0]), .7); } },
     { at: .8 + NBACK_PROTOCOL.soaMs / 1000 + .9, run: (d) => { d.press(); d.showHint('check', d.p.pads[0].position, { ttl: 1.2 }); } },
-    { at: .8 + 2 * NBACK_PROTOCOL.soaMs / 1000, run: (d) => { d.p.pads[0].position.x = NBACK_STAGE.visualPadX; nbackLight(d, 2, 4); d.moveTo(aimAt(d, d.p.pads[1]), .7); } },
-    { at: .8 + 2 * NBACK_PROTOCOL.soaMs / 1000 + .9, run: (d) => { d.press(); d.showHint('check', d.p.pads[2].position, { ttl: 1.2 }); } },
-    { at: .8 + 3 * NBACK_PROTOCOL.soaMs / 1000, run: (d) => { nbackLight(d, 4, 5); d.showCursor(false); } },
-    { at: .8 + 4 * NBACK_PROTOCOL.soaMs / 1000, run: (d) => { nbackLight(d, 4, 5); d.showCursor(true); d.moveTo(aimAt(d, d.p.pads[1]), .7); } },
-    { at: .8 + 4 * NBACK_PROTOCOL.soaMs / 1000 + .8, run: (d) => { d.press(); d.showHint('check', new THREE.Vector3(0, 1.55, -4.9), { ttl: 1.1 }); } },
+    { at: .8 + 2 * NBACK_PROTOCOL.soaMs / 1000, run: (d) => {
+      d.p.pads[0].position.x = NBACK_STAGE.visualPadX;
+      d.p.pads[1].visible = true; d.p.pads[2].visible = true;
+      nbackLight(d, 2, 4); d.showCursor(false);
+    } },
+    { at: .8 + 3 * NBACK_PROTOCOL.soaMs / 1000, run: (d) => { nbackLight(d, 2, 5); d.showCursor(true); d.moveTo(aimAt(d, d.p.pads[0]), .7); } },
+    { at: .8 + 3 * NBACK_PROTOCOL.soaMs / 1000 + .9, run: (d) => { d.press(); d.showHint('check', d.p.pads[0].position, { ttl: 1.2 }); } },
+    { at: .8 + 4 * NBACK_PROTOCOL.soaMs / 1000, run: (d) => { nbackLight(d, 4, 5); d.moveTo(aimAt(d, d.p.pads[2]), .7); } },
+    { at: .8 + 4 * NBACK_PROTOCOL.soaMs / 1000 + .9, run: (d) => { d.press(); d.showHint('check', d.p.pads[2].position, { ttl: 1.2 }); } },
+    { at: .8 + 5 * NBACK_PROTOCOL.soaMs / 1000, run: (d) => { nbackLight(d, 0, 1); d.showCursor(false); } },
+    { at: .8 + 6 * NBACK_PROTOCOL.soaMs / 1000, run: (d) => { nbackLight(d, 0, 1); d.showCursor(true); d.moveTo(aimAt(d, d.p.pads[1]), .7); } },
+    { at: .8 + 6 * NBACK_PROTOCOL.soaMs / 1000 + .8, run: (d) => { d.press(); d.showHint('check', d.p.pads[1].position, { ttl: 1.1 }); } },
   ],
   tick(d, dt) {
     d.p.stars.forEach((m, i) => { m.material.opacity = i === d.s.lit && d.t - d.s.onset < NBACK_PROTOCOL.stimulusMs / 1000 ? .95 : .18; });

@@ -58,7 +58,7 @@ const ASSESS_ORDER = ['cpt', 'delay'];
  * ⚠️ 仍**别**把 `ufov` 塞进 `ORDER` 或 `ASSESS_ORDER`：那两档的指标口径与免责声明都不适用它。
  */
 const TRAIN_ORDER = ['ufov'];
-/** 双模态星忆从 0-back 引导到双模态 1/2-back；自适应记录仅作同一儿童纵向追踪。 */
+/** 双模态星忆先做图形引导，再由老师/儿童选择第 1、2 或 3 关；记录仅作同一儿童纵向追踪。 */
 const NBACK_ORDER = ['nback'];
 // GitHub Pages 的公开版本只用于游戏演示：不接设备、不建被试、不向服务端归档。
 // ?publicDemo=1 让本机也能沿用同一条公开演示路径验收。
@@ -364,7 +364,7 @@ export class Game {
       } else if (e.type === 'nback-stardust') {
         this.say(e.combo >= 3 ? `连续 ${e.combo} 次，飞船加速！` : '太棒啦，星尘收集成功！', 2);
       } else if (e.type === 'nback-support') {
-        this.say('没关系，我们换个简单一点的任务', 2.8);
+        this.say('没关系，我们从第一个重新记', 2.8);
       }
     };
   }
@@ -989,7 +989,7 @@ export class Game {
         note: '变异系数 CV，越低越稳',
       },
       {
-        label: this.metrics.nBackSummary('nback').trials ? 'N-back d′' : '抑制控制 d′',
+        label: this.metrics.nBackSummary('nback').trials ? '双模态记忆 d′' : '抑制控制 d′',
         value: this.metrics.nBackSummary('nback').trials ? this.metrics.nBackSummary('nback').overall.dPrime.toFixed(2) : catcher.dPrime ? catcher.dPrime.toFixed(2) : '—',
         color: '#b98cff', note: '辨别 Go/NoGo 的敏感度',
       },
